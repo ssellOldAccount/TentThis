@@ -1,12 +1,9 @@
 package ssell.TentThis;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
 
 public class TTTent 
 {
@@ -14,8 +11,6 @@ public class TTTent
 	public int width = 0;
 	public int height = 0;
 	public int color = 0;
-	
-	public Location origin;
 	
 	public String schemaName;
 	    

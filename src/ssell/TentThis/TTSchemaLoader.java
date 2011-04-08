@@ -3,7 +3,6 @@ package ssell.TentThis;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -15,17 +14,18 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 public class TTSchemaLoader 
 {
 	private static final Logger log = Logger.getLogger( "Minecraft" );
 	
-	private List< List< Block > > tentList = new ArrayList< List< Block > >( );
+	private final TentThis plugin;
 	
-	public TTSchemaLoader( )
+	//--------------------------------------------------------------------------------------
+	
+	public TTSchemaLoader( TentThis instance )
 	{
-		
+		plugin = instance;
 	}
 	
 	public TTTent createTent( String name )
@@ -34,15 +34,15 @@ public class TTSchemaLoader
 		
 		try 
 		{
-			scanner = new Scanner( new BufferedReader( new FileReader( "TentThis.properties" ) ) );
+			scanner = new Scanner( new BufferedReader( new FileReader( "plugins/TentThis/TentThis.properties" ) ) );
 		} 
 		catch ( FileNotFoundException e ) 
 		{
-			log.info( "TentThis: Failed to find 'TentThis.properties'!" );
+			log.info( "TentThis: Failed to find '/plugins/TentThis/TentThis.properties'!" );
 			
 			return null;
 		}
-		
+
 		boolean properSchema = false;
 		
 		int l, w, h;
@@ -506,7 +506,16 @@ public class TTSchemaLoader
 		
 		bedsAndDoors( newTent, alignment );
 		
-		tentList.add( newTent );
+		TTPlayer ttPlayer = plugin.manager.getPlayer( player.getName( ) );
+		
+		if( ttPlayer != null )
+		{
+			ttPlayer.tentList.add( newTent );
+		}
+		else
+		{
+			log.info( "TentThis: TTPlayer is null! [TTSchemaLoader|RenderTent]" );
+		}
 		
 		return true;
 	}
@@ -623,7 +632,7 @@ public class TTSchemaLoader
 			}
 		}
 	}
-	
+	/*
 	public List< Block > isBlockTent( Block block )
 	{
 		for( int i = 0; i < tentList.size( ); i++ )
@@ -638,7 +647,7 @@ public class TTSchemaLoader
 			}
 		}
 		return null;
-	}
+	}*/
 	
 	public void destroyTent( List< Block > tent, Player player )
 	{		
@@ -669,6 +678,15 @@ public class TTSchemaLoader
 		
 		tent.clear( );
 		
-		tentList.remove( tent );
+		TTPlayer ttPlayer = plugin.manager.getPlayer( player.getName( ) );
+		
+		if( ttPlayer != null )
+		{
+			ttPlayer.tentList.remove( tent );
+		}
+		else
+		{
+			log.info( "TentThis: TTPlayer is null! [SchemaLoader|DestroyTent]" );
+		}
 	}
 }

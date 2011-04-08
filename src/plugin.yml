@@ -1,6 +1,7 @@
 name: TentThis
 main: ssell.TentThis.TentThis
-version: "1.2.20"
+version: "2.1.0"
+author: ssell
 commands:
     ttTent:
         description: Sets the plugin to start waiting to build.
@@ -8,7 +9,7 @@ commands:
     ttSchema:
         description: Set the tent schema to be built.
         usage: /<command> 
-    ttWhat:
+    ttInfo:
         description: Reports the current schema.
         usage: /<command>
     ttNoCommand:
@@ -16,4 +17,7 @@ commands:
         usage: /<command>
     ttReload:
         description: Finds new CreationBlock without having to restart server.
-        usage: /<command> 
+        usage: /<command>
+    ttLimit:
+        description: Sets the tent limit for provided player or everyone.
+        usage: /<command>

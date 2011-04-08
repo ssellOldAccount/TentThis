@@ -1,5 +1,6 @@
 package ssell.TentThis;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.ChatColor;
@@ -8,25 +9,22 @@ import org.bukkit.block.Block;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockListener;
-import org.bukkit.event.block.BlockRightClickEvent;
 import org.bukkit.inventory.ItemStack;
 
 public class TTBlockListener 
 	extends BlockListener
 {
 	private final TentThis plugin;
-	private final TTSchemaLoader schemaLoader;
 	
-	private boolean listenForSponge = false;
-	private boolean noCommand = false;
-	private boolean destroying = false;
+	public List< String > listenList = new ArrayList< String >( );
 	
 	public int creationBlock = 19;
 	
-	public TTBlockListener( TentThis instance, TTSchemaLoader schema )
+	//--------------------------------------------------------------------------------------
+	
+	public TTBlockListener( TentThis instance )
 	{
 		plugin = instance;
-		schemaLoader = schema;
 	}
 	
 	@Override
@@ -34,30 +32,14 @@ public class TTBlockListener
 	{
 		super.onBlockDamage( event );
 		
-		if( listenForSponge && !noCommand )
+		if( listenList.contains( event.getPlayer( ).getName( ) ) )
 		{
 			if( event.getBlock( ).getTypeId( ) == creationBlock )
 			{
-				plugin.buildTent( event.getPlayer( ), event.getBlock( ) );
-				
-				listenForSponge = false;
-				
-				return;
+				plugin.buildTent( event.getPlayer( ).getName( ), event.getBlock( ) );
 			}
-		}
-	}
-	
-	@Override
-	public void onBlockRightClick( BlockRightClickEvent event )
-	{
-		super.onBlockRightClick( event );
-		
-		if( noCommand && listenForSponge )
-		{
-			if( event.getBlock( ).getType( ).equals( Material.SPONGE ) )
-			{
-				plugin.buildTent( event.getPlayer( ), event.getBlock( ) );
-			}
+			
+			listenList.remove( event.getPlayer( ).getName( ) );
 		}
 	}
 	
@@ -65,23 +47,58 @@ public class TTBlockListener
 	public void onBlockBreak( BlockBreakEvent event )
 	{
 		super.onBlockBreak( event );
-				
+		
 		if( event.getBlock( ).getType( ) == Material.WOOL )
 		{
-			List< Block > tent = schemaLoader.isBlockTent( event.getBlock( ) );
+			//Get the player that owns the tent
+			TTPlayer player = plugin.manager.whoOwnsThis( event.getBlock( ) );
 			
-			if( tent != null )
+			if( player != null )
 			{
+				//Do not allow unauthorized players to break the tent.
+				if( !event.getPlayer( ).getName( ).equalsIgnoreCase( player.name ) )
+				{
+					if( plugin.permission )
+					{
+						if( !TentThis.Permissions.has( event.getPlayer( ), "TentThis.general.destroyAnyTent" ) )
+						{
+							event.getPlayer( ).sendMessage( ChatColor.DARK_RED + "This is not your tent!" );
+							event.setCancelled( true );
+							return;
+						}
+					}
+					else
+					{
+						event.getPlayer( ).sendMessage( ChatColor.DARK_RED + "This is not your tent!" );
+						event.setCancelled( true );
+						return;
+					}
+					
+				}
+				
+				//Get the actual tent
+				List< Block > tent = new ArrayList< Block >( );
+				
+				for( int i = 0; i < player.tentList.size( ); i++ )
+				{
+					if( player.tentList.get( i ).contains( event.getBlock( ) ) )
+					{
+						tent = player.tentList.get( i );
+						
+						break;
+					}
+				}
+				
 				event.getPlayer( ).getInventory( ).addItem( new ItemStack( creationBlock, 1 ) );
 				
-				schemaLoader.destroyTent( tent, event.getPlayer( ) );
+				plugin.schemaLoader.destroyTent( tent, event.getPlayer( ) );
 			}
 		}
 		else if( invalidType( event.getBlock( ).getType( ) ) )
 		{
-			List< Block > tent = schemaLoader.isBlockTent( event.getBlock( ) );
+			TTPlayer player = plugin.manager.whoOwnsThis( event.getBlock( ) );
 			
-			if( tent != null )
+			if( player != null )
 			{				
 				event.setCancelled( true );
 			}
@@ -101,32 +118,5 @@ public class TTBlockListener
 		}
 		
 		return false;
-	}
-	
-	public void setListen( boolean set )
-	{
-		if( !noCommand )
-		{
-			listenForSponge = set;
-		}
-		else
-		{
-			listenForSponge = true;
-		}
-	}
-	
-	public void setNoCommand( boolean set )
-	{
-		noCommand = set;
-	}
-	
-	public boolean getListen( )
-	{
-		return listenForSponge;
-	}
-	
-	public boolean getNoCommand( )
-	{
-		return noCommand;
 	}
 }
