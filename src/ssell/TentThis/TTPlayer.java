@@ -9,7 +9,7 @@ public class TTPlayer
 {
 	public TTTent currentTent;
 	
-	public List< List< Block > > tentList = new ArrayList< List< Block > >( );
+	public List< JavaPair< String, List< Block > > > tentList = new ArrayList< JavaPair< String, List< Block > > >( );
 	
 	public int limit;
 	

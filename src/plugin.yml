@@ -21,3 +21,6 @@ commands:
     ttLimit:
         description: Sets the tent limit for provided player or everyone.
         usage: /<command>
+    ttReverseSchema:
+        description: Sets the tent limit for provided player or everyone.
+        usage: /<command>

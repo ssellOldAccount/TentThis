@@ -11,18 +11,20 @@ public class TTTent
 	public int width = 0;
 	public int height = 0;
 	public int color = 0;
+	public int destructionBlock = 35;
 	
 	public String schemaName;
 	    
 	       //Y      Z   X           
 	public List< List< List< Material > > > blockList = new ArrayList< List< List< Material > > >( );
 	
-	public TTTent( String name, int length, int width, int height, String color )
+	public TTTent( String name, int length, int width, int height, int destructionBlock, String color )
 	{
 		schemaName = name;
 		this.length = length;
 		this.width = width;
 		this.height = height;
+		this.destructionBlock = destructionBlock;
 		
 		//Get the color
 		if( color != null )

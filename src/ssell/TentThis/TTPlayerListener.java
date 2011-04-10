@@ -28,15 +28,15 @@ public class TTPlayerListener
 	
 	@Override
 	public void onPlayerJoin( PlayerJoinEvent event )
-	{
-		super.onPlayerJoin( event );
-		
-		plugin.getServer( ).broadcastMessage( "Player joined.." );
-		
+	{		
 		if( !plugin.manager.isTracked( event.getPlayer( ).getName( ) ) )
 		{
-			plugin.getServer( ).broadcastMessage( "They are new. Adding" );
 			plugin.manager.addPlayer( event.getPlayer( ).getName( ) );
+		}
+		
+		if( plugin.noCommandDefault )
+		{
+			listenList.add( event.getPlayer( ).getName( ) );
 		}
 	}
 	
@@ -56,6 +56,12 @@ public class TTPlayerListener
 				{
 					plugin.buildTent( event.getPlayer( ).getName( ), event.getClickedBlock( ) );
 				}
+			}
+			
+			if( plugin.reverseSchema.isTracked( event.getPlayer( ).getName( ) ) != -1 )
+			{
+				//Waiting on this player to make a reverse schema.
+				plugin.reverseSchema.updatePlayer( event.getPlayer( ).getName( ), event.getClickedBlock( ) );
 			}
 		}
 	}

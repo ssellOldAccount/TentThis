@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Logger;
 
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 
 public class TTManager 
@@ -438,13 +439,15 @@ public class TTManager
 	
 	public TTPlayer whoOwnsThis( Block block )
 	{
+		TTPlayer player = null;
+		
 		for( int i = 0; i < playerList.size( ); i++ )
 		{
-			TTPlayer player = playerList.get( i );
+			player = playerList.get( i );
 			
 			for( int j = 0; j < player.tentList.size( ); j++ )
 			{
-				if( player.tentList.get( j ).contains( block ) )
+				if( player.tentList.get( j ).second.contains( block ) )
 				{
 					return player;
 				}
@@ -452,5 +455,38 @@ public class TTManager
 		}
 		
 		return null;
+	}
+	
+	public boolean isDestructionBlock( int material )
+	{
+		for( int i = 0; i < tentList.size( ); i++ )
+		{
+			if( tentList.get( i ).destructionBlock == material )
+			{
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	public boolean destructionBlockBelongToSchema( String schema, int material )
+	{
+		for( int i = 0; i < tentList.size( ); i++ )
+		{
+			if( tentList.get( i ).schemaName.equalsIgnoreCase( schema ) )
+			{
+				if( tentList.get( i ).destructionBlock == material )
+				{
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+		}
+		
+		return false;
 	}
 }

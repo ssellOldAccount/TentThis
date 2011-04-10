@@ -48,13 +48,14 @@ public class TTBlockListener
 	{
 		super.onBlockBreak( event );
 		
-		if( event.getBlock( ).getType( ) == Material.WOOL )
+		if( plugin.manager.isDestructionBlock( event.getBlock( ).getTypeId( ) ) )
 		{
+			
 			//Get the player that owns the tent
 			TTPlayer player = plugin.manager.whoOwnsThis( event.getBlock( ) );
 			
 			if( player != null )
-			{
+			{				
 				//Do not allow unauthorized players to break the tent.
 				if( !event.getPlayer( ).getName( ).equalsIgnoreCase( player.name ) )
 				{
@@ -77,25 +78,38 @@ public class TTBlockListener
 				}
 				
 				//Get the actual tent
-				List< Block > tent = new ArrayList< Block >( );
+				List< Block > tent = null;
 				
 				for( int i = 0; i < player.tentList.size( ); i++ )
-				{
-					if( player.tentList.get( i ).contains( event.getBlock( ) ) )
+				{	
+					if( player.tentList.get( i ).second.contains( event.getBlock( ) ) )
 					{
-						tent = player.tentList.get( i );
-						
-						break;
+						if( plugin.manager.destructionBlockBelongToSchema( 
+							player.tentList.get( i ).first, event.getBlock( ).getTypeId( ) ) )
+						{
+							tent = player.tentList.get( i ).second;
+							
+							break;
+						}
 					}
+					
 				}
 				
-				event.getPlayer( ).getInventory( ).addItem( new ItemStack( creationBlock, 1 ) );
-				
-				plugin.schemaLoader.destroyTent( tent, event.getPlayer( ) );
+				if( tent != null )
+				{
+					event.getPlayer( ).getInventory( ).addItem( new ItemStack( creationBlock, 1 ) );
+					
+					plugin.schemaLoader.destroyTent( tent, event.getPlayer( ) );
+				}
+				else
+				{
+					event.setCancelled( true );
+				}
 			}
 		}
-		else if( invalidType( event.getBlock( ).getType( ) ) )
+		else
 		{
+			//Does the block belong to a tent?
 			TTPlayer player = plugin.manager.whoOwnsThis( event.getBlock( ) );
 			
 			if( player != null )
@@ -103,20 +117,7 @@ public class TTBlockListener
 				event.setCancelled( true );
 			}
 		}
-	}
-	
-	public boolean invalidType( Material material )
-	{
-		if( ( material == Material.WORKBENCH ) ||
-			( material == Material.FURNACE ) ||
-			( material == Material.TORCH ) ||
-			( material == Material.WOOD_DOOR ) ||
-			( material == Material.BED_BLOCK ) ||
-			( material == Material.CHEST ) )
-		{
-			return true;
-		}
 		
-		return false;
+		Block block = null;
 	}
 }

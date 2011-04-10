@@ -14,12 +14,15 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 public class TTSchemaLoader 
 {
 	private static final Logger log = Logger.getLogger( "Minecraft" );
 	
 	private final TentThis plugin;
+	
+	private List< JavaPair< Material, Block > > fragileList = new ArrayList< JavaPair< Material, Block > >( );
 	
 	//--------------------------------------------------------------------------------------
 	
@@ -45,7 +48,10 @@ public class TTSchemaLoader
 
 		boolean properSchema = false;
 		
-		int l, w, h;
+		int l = 0;
+		int w = 0;
+		int h = 0;
+		int destructionBlock = 35;
 		
 		//----------------------------------------------------------------------------------
 		// Does the schema exist?
@@ -80,6 +86,27 @@ public class TTSchemaLoader
 		TTTent tent;
 		
 		//The scanner should be in the proper place due to the break
+		
+		//Get the destructionBlock
+		if( scanner.hasNext( ) )
+		{
+			String line = scanner.next( );
+			
+			if( line.contains( "<destructionBlock=" ) )
+			{
+				String blockID = line.substring( line.indexOf( '=' ) + 1, line.indexOf( '>' ) );
+				
+				destructionBlock = Integer.parseInt( blockID );
+			}
+			else
+			{
+				log.info( "TentThis: No DestructionBlock specified in schema '" + name + "'!" );
+				
+				scanner.close( );
+				
+				return null;
+			}
+		}
 		
 		//Get length and width dimensions
 		if( scanner.hasNext( ) )
@@ -201,7 +228,7 @@ public class TTSchemaLoader
 		}
 		
 		//Create the tent. We have all required beginning information
-		tent = new TTTent( name, l, w, h, color );
+		tent = new TTTent( name, l, w, h, destructionBlock, color );
 	
 		
 		//----------------------------------------------------------------------------------
@@ -222,6 +249,11 @@ public class TTSchemaLoader
 			
 			while( !string.contains( "tentSchema" ) )
 			{
+				if( string.contains( "destructionBlock" ) )
+				{
+					break;
+				}
+				
 				if( string.equalsIgnoreCase( "</floor>" ) )
 				{
 					string = scanner.next( );
@@ -239,72 +271,64 @@ public class TTSchemaLoader
 					string = scanner.next( );
 				}
 				
-				while( !string.equalsIgnoreCase( "</floor>" ) && !string.equalsIgnoreCase( "<tentSchema>" ) )
+				while( !string.equalsIgnoreCase( "</floor>" ) && !string.equalsIgnoreCase( "</tentSchema>" ) )
 				{
 					if( string.contains( "tentSchema" ) )
 					{
 						break;
 					}
 					
-					if( string.length( ) < w )
-					{
-						log.info( "TentThis: '" + string + "' is shorter than the specified width of " +
-								w + "! [TTSchemeLoader]" );
-						
-						scanner.close( );
-						
-						return null;
-					}
+					char c;
+					char str[] = { '0', '0' };
 					
-					for( int i = 0; i < w; i++ )
+					int strCntr = 0;
+					
+					for( int i = 0; i < string.length( ); i++ )
 					{
-						char c = string.charAt( i );
+						c = string.charAt( i );
 						
-						switch( c )
+						//Continue to next block
+						if( c == '.' )
+						{			
+							//Head of the bed
+							if( str[ 1 ] == 'H' )
+							{
+								xList.add( Material.GLOWING_REDSTONE_ORE );
+							}
+							else if( str[ 1 ] == 'F' )
+							{
+								//Foot of the bed
+								xList.add( Material.LEAVES );
+							}
+							else if( str[ 1 ] == 'B' )
+							{
+								//Bottom of the door
+								xList.add( Material.TNT );
+							}
+							else if( str[ 1 ] == 'T' )
+							{
+								//Top of door
+								xList.add( Material.AIR );
+							}
+							else
+							{
+								int material = Integer.parseInt( String.copyValueOf( str ) );
+									
+								xList.add( Material.getMaterial( material ) );
+							}
+							
+							strCntr = 0;									
+						}
+						else
 						{
-						case '_':
-							//Air
-							xList.add( Material.AIR );
-							break;
-						case 'W':
-							//Wall (Wool)
-							xList.add( Material.WOOL );
-							break;
-						case 'B':
-							//Bed
-							xList.add( Material.JUKEBOX );
-							break;
-						case 'H':
-							xList.add( Material.SPONGE );
-							break;
-						case 'F':
-							//Furnace
-							xList.add( Material.FURNACE );
-							break;
-						case 'C':
-							//Chest
-							xList.add( Material.CHEST );
-							break;
-						case 'T':
-							//Crafting Table
-							xList.add( Material.WORKBENCH );
-							break;
-						case 'L':
-							//Light Source (Torch)
-							xList.add( Material.TORCH );
-							break;
-						case 'D':
-							//Door
-							xList.add( Material.JACK_O_LANTERN );
-							break;
-						default:
-							log.info( "TentThis: Invalid Character '" + c + "' in line '" +
-									string + "' in schema '" + 
-									name + "'! [TTSchemaLoader]" );
+							if( strCntr > 1 )
+							{
+								log.info( "Out of Range! : " + strCntr + " : " + c + " : " + string + " : " + name );
+							}
+							//Normal (non-bed/door block)
+							str[ strCntr ] = c;
 							
-							scanner.close( );
-							
-							return null;
+							strCntr++;
 						}
 					}
 					
@@ -317,6 +341,11 @@ public class TTSchemaLoader
 						xList = new ArrayList< Material >( );
 					}
 				}
+			}
+			
+			if( string.contains( "destructionBlock" ) )
+			{
+				break;
 			}
 		}
 		
@@ -483,13 +512,24 @@ public class TTSchemaLoader
 					Material material = tent.blockList.get( y ).get( z ).get( x );
 					
 					if( material != null )
-					{						
-						if( material == Material.BED_BLOCK )
+					{		
+						if( ( material.equals( Material.TORCH ) ) || 
+							( material.equals( Material.LADDER ) ) ||
+							( material.equals( Material.PAINTING ) ) ||
+							( material.equals( Material.LEVER ) ) ||
+							( material.equals( Material.STONE_BUTTON ) ) ||
+							( material.getId( ) == 75 ) ||		//Redstone Torch Off
+							( material.getId( ) == 76 ) )		//Redstone Torch On
 						{
-							player.getWorld( ).getBlockAt( check ).setTypeIdAndData( 26, ( byte )0, false );
+							//These blocks rely on other blocks to 'hold' onto.
+							//If these are created before the wall that they
+							//go to, they will pop off.
+							JavaPair< Material, Block > newPair = new JavaPair< Material, Block  >( material, player.getWorld( ).getBlockAt( check ) );
+							
+							fragileList.add( newPair );
 						}
 						else
-						{
+						{	
 							player.getWorld( ).getBlockAt( check ).setType( material );
 						}
 						
@@ -506,11 +546,23 @@ public class TTSchemaLoader
 		
 		bedsAndDoors( newTent, alignment );
 		
+		//----------------------------------------------------------------------------------
+		// Fragile List
+		
+		for( int i = 0; i < fragileList.size( ); i++ )
+		{
+			fragileList.get( i ).second.setType( fragileList.get( i ).first );
+		}
+		
+		//----------------------------------------------------------------------------------
+		
 		TTPlayer ttPlayer = plugin.manager.getPlayer( player.getName( ) );
 		
 		if( ttPlayer != null )
 		{
-			ttPlayer.tentList.add( newTent );
+			JavaPair< String, List< Block > > newPair = new JavaPair< String, List< Block > >( tent.schemaName, newTent );
+			
+			ttPlayer.tentList.add( newPair );
 		}
 		else
 		{
@@ -528,7 +580,7 @@ public class TTSchemaLoader
 		{
 			Block block = list.get( i );
 			
-			if( block.getType(  ) == Material.JUKEBOX ) 
+			if( block.getType(  ) == Material.LEAVES ) 
 			{
 			    for( BlockFace face: BlockFace.values( ) ) 
 			    {
@@ -536,7 +588,7 @@ public class TTSchemaLoader
 			    	{
 			    		final Block facingBlock = block.getFace( face );
 			        
-			    		if( facingBlock.getType( ) == Material.SPONGE ) 
+			    		if( facingBlock.getType( ) == Material.GLOWING_REDSTONE_ORE ) 
 			    		{
 			    			byte flags = ( byte )8;
 			    			byte direction = ( byte )( 0x0 );
@@ -572,12 +624,12 @@ public class TTSchemaLoader
 			    	}
 			    }
 			}
-			else if( block.getType( ).equals( Material.JACK_O_LANTERN ) )
+			else if( block.getType( ).equals( Material.TNT ) )
 			{
 				Location loc = block.getLocation( );
 				
 				Block check = block.getWorld( ).getBlockAt( 
-									new Location( list.get( i ).getWorld( ),
+									new Location( block.getWorld( ),
 								        loc.getX( ) - 1,
 								        loc.getY( ),
 								        loc.getZ( ) ) );
@@ -593,8 +645,8 @@ public class TTSchemaLoader
 				
 				if( side == 4 )
 				{
-					check = list.get( i ).getWorld( ).getBlockAt( 
-							new Location( list.get( i ).getWorld( ),
+					check = block.getWorld( ).getBlockAt( 
+							new Location( block.getWorld( ),
 						        loc.getX( ) + 1,
 						        loc.getY( ),
 						        loc.getZ( ) ) );
@@ -608,8 +660,8 @@ public class TTSchemaLoader
 				
 				if( side == 4 )
 				{
-					check = list.get( i ).getWorld( ).getBlockAt( 
-							new Location( list.get( i ).getWorld( ),
+					check = block.getWorld( ).getBlockAt( 
+							new Location( block.getWorld( ),
 						        loc.getX( ),
 						        loc.getY( ),
 						        loc.getZ( ) + 1 ) );
@@ -626,28 +678,12 @@ public class TTSchemaLoader
 					side = 3;
 				}
 								
-				list.get( i ).setTypeIdAndData( 64, side, false);
+				block.setTypeIdAndData( 64, side, false);
 				
-				list.get( i ).getFace( BlockFace.UP ).setTypeIdAndData(64, ( byte ) 8, true );
+				block.getWorld( ).getBlockAt( block.getX( ), block.getY( ) + 1, block.getZ( ) ).setTypeIdAndData( 64, ( byte ) 8, true );
 			}
 		}
 	}
-	/*
-	public List< Block > isBlockTent( Block block )
-	{
-		for( int i = 0; i < tentList.size( ); i++ )
-		{
-			for( int j = 0; j < tentList.get( i ).size( ); j++ )
-			{
-				if( tentList.get( i ).get( j ).equals( block ) )
-				{
-					//part of a tent
-					return tentList.get( i );
-				}
-			}
-		}
-		return null;
-	}*/
 	
 	public void destroyTent( List< Block > tent, Player player )
 	{		
@@ -690,3 +726,5 @@ public class TTSchemaLoader
 		}
 	}
 }
+
+

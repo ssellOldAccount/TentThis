@@ -28,12 +28,15 @@ public class TentThis
 	private static final Logger log = Logger.getLogger( "Minecraft" );
 	
 	public static PermissionHandler Permissions;
+	
 	public boolean permission = false;
+	public boolean noCommandDefault = false;
 	
 	public final TTBlockListener blockListener = new TTBlockListener( this );
 	public final TTPlayerListener playerListener = new TTPlayerListener( this );
 	public final TTSchemaLoader schemaLoader = new TTSchemaLoader( this );
 	public final TTManager manager = new TTManager( this );
+	public final TTReverseSchema reverseSchema = new TTReverseSchema( this );
 	
 	//--------------------------------------------------------------------------------------
 	
@@ -54,8 +57,7 @@ public class TentThis
 		
 		setupPermissions( );
 		
-		getCreationBlock( );
-		getDefaultLimit( );
+		getDefaults( );
 		setupSchemas( );
 		
 		log.info( "TentThis v2.1.0 by ssell is enabled!" );		
@@ -73,6 +75,7 @@ public class TentThis
 	 * TentThis.commands.setAllSchema<br>
 	 * TentThis.commands.setLimit<br>
 	 * TentThis.general.destroyAnyTent<br>
+	 * TentThis.commands.reverseSchema<br>
 	 */
 	private void setupPermissions( ) 
 	{
@@ -126,7 +129,7 @@ public class TentThis
 				}
 				else
 				{
-					player.sendMessage( ChatColor.DARK_RED + "Improper use of command!" );
+					player.sendMessage( ChatColor.DARK_RED + "Improper use of command! /ttSchema <schemaName> <optional:player>" );
 				}
 				
 				return true;
@@ -139,7 +142,7 @@ public class TentThis
 				}
 				else
 				{
-					player.sendMessage( ChatColor.DARK_RED + "Improper use of command!" );
+					player.sendMessage( ChatColor.DARK_RED + "Improper use of command! /ttLimit <limit> <playerName>" );
 				}
 				
 				return true;
@@ -159,6 +162,19 @@ public class TentThis
 			else if( commandName.equals( "ttinfo" ) )
 			{
 				infoCommand( player );
+				
+				return true;
+			}
+			else if( commandName.equals( "ttreverseschema" ) )
+			{
+				if( split.length == 3 )
+				{
+					reverseCommand( player, split[ 0 ], split[ 1 ], split[ 2 ] );
+				}
+				else
+				{
+					player.sendMessage( ChatColor.DARK_RED + "Invalid Command! /ttReverseSchema <SchemaName> <cornerToIgnore> <destructionBlock>" );
+				}
 				
 				return true;
 			}
@@ -332,7 +348,7 @@ public class TentThis
 	 */
 	public void reloadCommand( Player player )
 	{
-		if( getCreationBlock( ) )
+		if( getDefaults( ) )
 		{
 			player.sendMessage( ChatColor.GOLD + "TentThis reload successful!" );
 		}
@@ -388,6 +404,41 @@ public class TentThis
 		
 	}
 	
+	/**
+	 * 
+	 * @param player Player who sent the command
+	 * @param schemaName Name of the schema
+	 * @param cornerToIgnore Corner(s) to ignore when saving. 1 = first, 2 = last, 3 = both.
+	 * @param destructionBlock Block that when broken, will destroy the tent.
+	 */
+	public void reverseCommand( Player player, String schemaName, String cornerToIgnore, String destructionBlock )
+	{
+		if( permission )
+		{
+			if( !TentThis.Permissions.has( player, "TentThis.commands.reverseSchema" ) )
+			{
+				player.sendMessage( ChatColor.DARK_RED + "You don't have permission to perform this action!" );
+				
+				return;
+			}
+		}
+		
+		if( schemaName != null )
+		{
+			if( manager.exists( schemaName ) )
+			{
+				player.sendMessage( ChatColor.DARK_RED + "A schema with that name already exists!" );
+				
+				return;
+			}
+			
+			player.sendMessage( ChatColor.GREEN + "TentThis Reverse Schema: Please select the corners." );
+		
+			reverseSchema.waitForPlayer( player.getName( ), schemaName, 
+					Integer.parseInt( cornerToIgnore ), Integer.parseInt( destructionBlock ) );
+		}
+	}
+	
 	//--------------------------------------------------------------------------------------
 	
 	public void buildTent( String name, Block block )
@@ -409,7 +460,7 @@ public class TentThis
 		}
 	}
 	
-	public boolean getCreationBlock( )
+	public boolean getDefaults( )
 	{
 		Scanner scanner;
 	
@@ -448,62 +499,8 @@ public class TentThis
 					
 					return false;
 				}
-				
-				scanner.close( );
-				
-				return true;
 			}
 			else if( string.contains( "TentLimit=" ) )
-			{
-				String substr = string.substring( 14 );
-				
-				try
-				{
-					int limit = Integer.parseInt( substr.trim( ) );
-					
-					manager.globalLimit = limit;
-					
-				}
-				catch( NumberFormatException nfe )
-				{
-					log.info( "TentThis: '" + string + "' improperly formatted! [getCreationBlock]" );
-					
-					scanner.close( );
-					
-					return false;
-				}
-				
-				scanner.close( );
-				
-				return true;
-			}
-		}
-		
-		scanner.close( );
-		
-		return false;
-	}
-	
-	public boolean getDefaultLimit( )
-	{
-		Scanner scanner;
-	
-		try 
-		{
-			scanner = new Scanner( new BufferedReader( new FileReader( "plugins/TentThis/TentThis.properties" ) ) );
-		} 
-		catch ( FileNotFoundException e ) 
-		{
-			log.info( "TentThis: Failed to find 'TentThis.properties'!" );
-			
-			return false;
-		}
-		
-		while( scanner.hasNext( ) )
-		{
-			String string = scanner.next( );
-			
-			if( string.contains( "TentLimit=" ) )
 			{
 				String substr = string.substring( 10 );
 				
@@ -521,6 +518,15 @@ public class TentThis
 					scanner.close( );
 					
 					return false;
+				}
+			}
+			else if( string.contains( "NoCommand=" ) )
+			{
+				String substr = string.substring( 10 );
+				
+				if( substr.equalsIgnoreCase( "true" ) )
+				{
+					noCommandDefault = true;
 				}
 				
 				scanner.close( );
